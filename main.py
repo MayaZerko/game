@@ -1,30 +1,44 @@
 from random import randint, choice
 
-SIZE_N = randint(5, 20)
-SIZE_M = randint(5, 20)
+SIZE_N = randint(10, 30)
+SIZE_M = randint(10, 30)
 
-def check_state(char_x, char_y, char_sign,
-                enemy_x, enemy_y,
-                exit_x, exit_y):
-    win_condition = char_x == exit_x and char_y == exit_y
-    loss_condition = char_x == enemy_x and char_y == enemy_y
+
+def check_state(objects):
+    for obj in objects:
+        if obj['type'] == 'char':
+            char = obj
+        elif obj['type'] == 'portal':
+            portal = obj
+        elif obj['type'] == 'enemy':
+            loss_condition = char['x'] == obj['x'] and char['y'] == obj['y']
+            if loss_condition:
+                char['sign'] = 'L'
+                print(f'You Lost in {turns} turns!')
+                break
+
+    win_condition = char['x'] == portal['x'] and char['y'] == portal['y']
 
     if win_condition:
-        char_sign = 'W'
+        char['sign'] = 'W'
         print(f'You Won in {turns} turns!')
-    elif loss_condition:
-        char_sign = 'L'
-        print(f'You Lost in {turns} turns!')
 
-    return char_sign, win_condition or loss_condition
+    return win_condition or loss_condition
 
 
+def generate_enemies(count):
+    enemies = []
+    for _ in range(count):
+        enemy = {'x': randint(0, SIZE_N - 1),
+                 'y': randint(0, SIZE_M - 1),
+                 'sign': 'E',
+                 'type': 'enemy'}
+        enemies.append(enemy)
 
-def generate_map(char_x, char_y, char_sign,
-                 enemy_x, enemy_y, enemy_sign,
-                 exit_x, exit_y, exit_sign,
-                 size_n=SIZE_N, size_m=SIZE_M):
+    return enemies
 
+
+def generate_map(objects, size_n=SIZE_N, size_m=SIZE_M):
     world_map = []
 
     for j in range(size_m):
@@ -35,60 +49,63 @@ def generate_map(char_x, char_y, char_sign,
 
         world_map.append(row)
 
-
-    world_map[enemy_y][enemy_x] = enemy_sign
-    world_map[exit_y][exit_x] = exit_sign
-    world_map[char_y][char_x] = char_sign
+    for obj in objects:
+        world_map[obj['y']][obj['x']] = obj['sign']
 
     return world_map
 
 
-def move(direction, x, y, size_n=SIZE_N, size_m=SIZE_M):
-    if direction == 'u' and y > 0:
-        y -= 1
-    elif direction == 'd' and y < size_m - 1:
-        y += 1
-    elif direction == 'l' and x > 0:
-        x -= 1
-    elif direction == 'r' and x < size_n - 1:
-        x += 1
-
-    return x, y
+def move(direction, obj, size_n=SIZE_N, size_m=SIZE_M):
+    if direction == 'u' and obj['y'] > 0:
+        obj['y'] -= 1
+    elif direction == 'd' and obj['y'] < size_m - 1:
+        obj['y'] += 1
+    elif direction == 'l' and obj['x'] > 0:
+        obj['x'] -= 1
+    elif direction == 'r' and obj['x'] < size_n - 1:
+        obj['x'] += 1
 
 
-char_x = randint(0, SIZE_N - 1)
-char_y = randint(0, SIZE_M - 1)
-char_sign = 'X'
+def print_map(world_map):
+    for row in world_map:
+        print(f'| {" | ".join(row)} | ')
 
-enemy_x = randint(0, SIZE_N - 1)
-enemy_y = randint(0, SIZE_M - 1)
-enemy_sign = 'E'
 
-exit_x = randint(0, SIZE_N - 1)
-exit_y = randint(0, SIZE_M - 1)
-exit_sign = 'O'
+char = {'x': randint(0, SIZE_N - 1),
+        'y': randint(0, SIZE_M - 1),
+        'sign': 'X',
+        'type': 'char'}
+
+
+portal = {'x': randint(0, SIZE_N - 1),
+          'y': randint(0, SIZE_M - 1),
+          'sign': 'O',
+          'type': 'portal'}
+
+enemies = generate_enemies(10)
+
+objects = [char, portal] + enemies
 
 turns = 0
 
 while True:
-    char_sign, end_flag = check_state(char_x, char_y, char_sign,
-                                        enemy_x, enemy_y,
-                                        exit_x, exit_y)
+    end_flag = check_state(objects)
 
+    world_map = generate_map(objects)
 
-    world_map = generate_map(char_x, char_y, char_sign,
-                             enemy_x, enemy_y, enemy_sign,
-                             exit_x, exit_y, exit_sign)
+    print_map(world_map)
 
-    print(world_map)
     if end_flag:
         break
 
+    for obj in objects:
+        direction = ''
 
-    direction = input('Enter direction (u / d / l / r ): ')
-    char_x, char_y = move(direction, char_x, char_y)
+        if obj['type'] == 'char':
+            direction = input('Enter direction (u / d / l / r ): ')
+        elif obj['type'] == 'enemy':
+            direction = choice('udlr')
 
-    enemy_direction = choice('udlr')
-    enemy_x, enemy_y = move(enemy_direction, enemy_x, enemy_y)
+        move(direction, obj)
 
     turns += 1
